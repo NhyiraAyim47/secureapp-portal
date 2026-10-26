@@ -1,0 +1,1703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SecureApp">
+    <meta name="theme-color" content="#172b45">
+    <meta name="description" content="SecureApp Mobile - Account & Access Management for Tim's Manufacturing Ltd.">
+    <title>SecureApp Mobile | Tim's Manufacturing Ltd.</title>
+    
+    <meta name="format-detection" content="telephone=no">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+    <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+    <link rel="apple-touch-icon-precomposed" sizes="180x180" href="icons/apple-touch-icon.png">
+    
+    <link rel="stylesheet" href="styles.css?v=3.4">
+    <script src="email.min.js"></script>
+    <script src="seed-data.js?v=3.6" defer></script>
+    <script src="firestore-direct.js?v=3.6" defer></script>
+    <script src="app.js?v=3.6" defer></script>
+</head>
+<body>
+    <!-- Top Mobile Notification Toast -->
+    <div id="toast" class="mobile-toast" role="status" aria-live="polite" hidden></div>
+
+    <!-- PWA Install Banner (Shown on mobile browsers) -->
+    <div id="pwa-install-banner" class="pwa-banner" hidden>
+        <div class="pwa-banner-content">
+            <span class="pwa-banner-icon">📲</span>
+            <div>
+                <strong>Install SecureApp</strong>
+                <p>Add to home screen for the full native mobile experience.</p>
+            </div>
+        </div>
+        <div class="pwa-banner-actions">
+            <button id="pwa-install-btn" class="btn-xs btn-primary">Install</button>
+            <button id="pwa-dismiss-btn" class="btn-xs btn-ghost">✕</button>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- AUTHENTICATION CONTAINER (Login / Register / 2FA) -->
+    <!-- ========================================== -->
+    <div id="auth-container" class="auth-wrapper">
+        <header class="mobile-hero">
+            <div class="mobile-hero-badge">
+                <span class="badge-icon">🔐</span>
+                <div>
+                    <h1 class="brand-title">SecureApp</h1>
+                    <span class="brand-sub">Tim's Manufacturing Ltd.</span>
+                </div>
+            </div>
+            <p class="hero-motto">Innovation • Quality • Excellence</p>
+            <p class="hero-tagline">Mobile Security &amp; Access Management</p>
+        </header>
+
+        <main class="auth-card">
+            <!-- Auth Tab Switcher (Login vs Register) -->
+            <div class="auth-segmented-control" id="auth-tabs">
+                <button type="button" class="segment-tab active" data-auth-tab="login">Sign In</button>
+                <button type="button" class="segment-tab" data-auth-tab="register">Register</button>
+            </div>
+
+            <!-- Notice message -->
+            <div class="notice-box" id="auth-notice" hidden></div>
+
+            <!-- LOGIN VIEW -->
+            <section class="auth-view" id="view-login">
+                <div class="view-intro">
+                    <span class="auth-security-pill">🔐 Enterprise Identity Gateway</span>
+                    <h2>Welcome Back</h2>
+                    <p>Sign in with your enterprise credentials</p>
+                </div>
+                <form id="login-form" autocomplete="off" novalidate>
+                    <div class="form-field">
+                        <label for="login-email">Email Address</label>
+                        <div class="input-control">
+                            <span class="field-icon">✉</span>
+                            <input type="email" id="login-email" name="email" inputmode="email" autocomplete="off" placeholder="name@tim-mfg.com" required>
+                        </div>
+                    </div>
+                    <div class="form-field">
+                        <label for="login-password">Password</label>
+                        <div class="input-control">
+                            <span class="field-icon">🔒</span>
+                            <input type="password" id="login-password" name="password" autocomplete="new-password" placeholder="••••••••" required>
+                            <button type="button" class="btn-toggle-pw" id="pw-toggle-btn" aria-label="Toggle password visibility">👁</button>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block btn-touch">
+                        <span>Continue</span>
+                        <span class="btn-arrow">→</span>
+                    </button>
+                </form>
+
+                <!-- Quick Mobile Test Accounts Helper (Convenient for mobile testing) -->
+                <div class="mobile-demo-pill">
+                    <span class="demo-title">⚡ Quick Test Accounts:</span>
+                    <div class="demo-chip-group">
+                        <button type="button" class="chip" data-fill-demo="admin">Super Admin</button>
+                        <button type="button" class="chip" data-fill-demo="marketing">Marketing</button>
+                        <button type="button" class="chip" data-fill-demo="it">IT Manager</button>
+                        <button type="button" class="chip" data-fill-demo="user">Standard User</button>
+                    </div>
+                </div>
+
+                <!-- Standalone Cloud & Mail Relay Indicator -->
+                <div class="server-config-pill" id="server-config-pill" style="margin-top: 14px; text-align: center;">
+                    <button type="button" class="btn-server-status" id="btn-open-relay-settings" style="display: inline-flex; align-items: center; gap: 8px; background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 9999px; padding: 7px 14px; font-size: 11.5px; font-weight: 600; color: var(--primary, #3b82f6); cursor: pointer; transition: all 0.2s ease;">
+                        <span class="status-indicator-dot" id="server-status-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
+                        <span id="server-status-label">Cloud: Standalone Firestore &amp; Gmail</span>
+                        <span style="opacity: 0.7;">⚙️</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- REGISTER VIEW -->
+            <section class="auth-view" id="view-register" hidden>
+                <div class="view-intro">
+                    <span class="auth-security-pill">🏢 Organization Provisioning</span>
+                    <h2>Create Account</h2>
+                    <p>Register as a team member</p>
+                </div>
+                <form id="register-form" autocomplete="off" novalidate>
+                    <div class="form-field">
+                        <label for="reg-name">Full Name</label>
+                        <div class="input-control">
+                            <span class="field-icon">👤</span>
+                            <input type="text" id="reg-name" name="name" autocomplete="name" placeholder="Esther Timah" required>
+                        </div>
+                    </div>
+                    <div class="form-field">
+                        <label for="reg-email">Email Address</label>
+                        <div class="input-control">
+                            <span class="field-icon">✉</span>
+                            <input type="email" id="reg-email" name="email" inputmode="email" autocomplete="email" placeholder="esther@tim-mfg.com" required>
+                        </div>
+                    </div>
+                    <div class="form-field">
+                        <label for="reg-department">Department</label>
+                        <div class="input-control">
+                            <span class="field-icon">🏢</span>
+                            <select id="reg-department" name="department" required>
+                                <option value="" disabled selected>Select Department</option>
+                                <option value="Marketing">Marketing</option>
+                                <option value="IT">IT</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-field">
+                        <label for="reg-password">Password</label>
+                        <div class="input-control">
+                            <span class="field-icon">🔒</span>
+                            <input type="password" id="reg-password" name="password" minlength="8" placeholder="Enter strong password" autocomplete="new-password" required>
+                            <button type="button" class="btn-toggle-pw" id="reg-pw-toggle-btn" aria-label="Toggle password visibility">👁</button>
+                        </div>
+                        <!-- Live Password Complexity Checklist -->
+                        <div class="pw-requirements-box" id="pw-requirements-box">
+                            <span class="req-title">Password must contain:</span>
+                            <ul class="req-list">
+                                <li id="req-len" class="req-item"><span class="req-icon">✕</span> At least 8 characters</li>
+                                <li id="req-upper" class="req-item"><span class="req-icon">✕</span> At least 1 uppercase letter (A-Z)</li>
+                                <li id="req-lower" class="req-item"><span class="req-icon">✕</span> At least 1 lowercase letter (a-z)</li>
+                                <li id="req-num" class="req-item"><span class="req-icon">✕</span> At least 1 number (0-9)</li>
+                                <li id="req-special" class="req-item"><span class="req-icon">✕</span> At least 1 special character (!@#$%^&*)</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="form-field">
+                        <label for="reg-confirm-password">Confirm Password</label>
+                        <div class="input-control">
+                            <span class="field-icon">✓</span>
+                            <input type="password" id="reg-confirm-password" name="confirmPassword" minlength="8" placeholder="Repeat password" autocomplete="new-password" required>
+                            <button type="button" class="btn-toggle-pw" id="reg-conf-pw-toggle-btn" aria-label="Toggle confirm password visibility">👁</button>
+                        </div>
+                        <!-- Live Password Match Badge -->
+                        <div id="pw-match-badge" class="pw-match-badge" hidden></div>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block btn-touch">Create Account</button>
+                </form>
+            </section>
+
+            <!-- 2FA VERIFICATION VIEW -->
+            <section class="auth-view" id="view-verify" hidden>
+                <div class="view-intro">
+                    <span class="verify-shield-icon">🛡️</span>
+                    <h2>Two-Factor Authentication</h2>
+                    <p id="verify-method-msg">A verification code has been dispatched.</p>
+                </div>
+
+                <!-- 2FA Verification Method Choice Selector (Active when Authenticator is turned ON in account) -->
+                <div id="verify-method-selector-container" class="verify-method-selector-container" hidden>
+                    <label class="verify-method-label">Choose 2FA Verification Method:</label>
+                    <div class="verify-method-grid">
+                        <button type="button" id="btn-select-authenticator" class="verify-method-card active" aria-selected="true">
+                            <div class="card-icon">📱</div>
+                            <div class="card-title">Authenticator App</div>
+                            <div class="card-desc">Code from app</div>
+                        </button>
+                        <button type="button" id="btn-select-gmail-otp" class="verify-method-card" aria-selected="false">
+                            <div class="card-icon">✉️</div>
+                            <div class="card-title">Send OTP to Gmail</div>
+                            <div class="card-desc">Live code to email</div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Notice when Authenticator option is turned OFF in account (User can ONLY use Gmail OTP) -->
+                <div id="verify-auth-disabled-banner" class="verify-auth-disabled-banner" hidden>
+                    <span class="banner-icon">✉️</span>
+                    <div>
+                        <strong class="banner-title">Authenticator App is Disabled</strong>
+                        <span class="banner-text">Two-Factor Authenticator is turned off on this account. Sign-in requires a 6-digit verification code sent to your Gmail.</span>
+                    </div>
+                </div>
+
+                <!-- Professional Email Dispatch Notification (Shown in Gmail OTP Mode) -->
+                <div class="email-dispatched-card" id="email-dispatched-card" hidden>
+                    <span class="dispatched-icon">📨</span>
+                    <div class="dispatched-body">
+                        <strong>Security OTP Dispatched</strong>
+                        <p id="email-sent-destination">A 6-digit one-time password has been sent to your email address.</p>
+                        <small class="spam-hint">Please open your Gmail inbox (or check spam folder) to view your code. It expires in 10 minutes.</small>
+                        <div id="relay-setup-prompt" style="margin-top: 10px; display: none;">
+                            <button type="button" id="btn-open-relay-modal" class="btn btn-outline btn-sm" style="width: 100%; border-color: rgba(255,255,255,0.7); color: #ffffff; background: rgba(0,0,0,0.3); font-size: 12px; padding: 8px 12px; border-radius: 6px; font-weight: 600; cursor: pointer;">
+                                ⚙️ Connect Gmail Cloud Relay (Mobile Data Fix)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <form id="verify-form" autocomplete="off" novalidate>
+                    <div class="form-field">
+                        <label for="verify-code" id="verify-code-label">6-Digit Verification Code</label>
+                        <div class="input-control">
+                            <span class="field-icon" id="verify-field-icon">🔐</span>
+                            <input type="text" id="verify-code" name="code" inputmode="numeric" autocomplete="off" maxlength="6" placeholder="Enter 6-digit code" class="otp-input" required autofocus>
+                        </div>
+                    </div>
+
+                    <div class="resend-row" id="verify-resend-row" hidden>
+                        <button type="button" class="btn-xs btn-outline" id="btn-resend-otp">Resend OTP to Gmail (<span id="resend-countdown">60</span>s)</button>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block btn-touch" id="btn-submit-verify">Verify &amp; Enter</button>
+
+                    <button type="button" class="btn btn-ghost btn-block" id="btn-back-to-login" style="margin-top: 10px;">← Back to Sign In</button>
+                </form>
+            </section>
+        </main>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- LOGGED-IN MOBILE APP SHELL -->
+    <!-- ========================================== -->
+    <div id="mobile-shell" class="mobile-app-shell" hidden>
+        <!-- Mobile Top App Bar -->
+        <header class="mobile-top-bar">
+            <div class="top-bar-left">
+                <span class="app-logo-mini">🔐</span>
+                <div>
+                    <h2 class="top-bar-title">SecureApp</h2>
+                    <span class="user-role-pill" id="top-user-role">User</span>
+                </div>
+            </div>
+            <div class="top-bar-right">
+                <button type="button" class="icon-btn" id="btn-open-drawer" aria-label="Open More Options">
+                    <span>☰</span>
+                </button>
+                <div class="top-avatar" id="top-avatar-circle" title="Your Profile">U</div>
+            </div>
+        </header>
+
+        <!-- Main Scrollable Content Area -->
+        <main class="mobile-scroll-container">
+            <!-- 1. DASHBOARD VIEW -->
+            <section class="mobile-view" id="pane-dashboard">
+                <!-- Welcome Banner -->
+                <div class="welcome-card">
+                    <div class="welcome-text">
+                        <span class="dept-badge" id="dash-dept-badge">Tim's Manufacturing</span>
+                        <h3>Welcome, <span id="dash-user-name">User</span></h3>
+                        <p class="welcome-sub">Mobile security session is active.</p>
+                    </div>
+                    <div class="security-lock-badge">✓ 2FA Active</div>
+                </div>
+
+                <!-- Admin Quick Stats (Hidden for standard users) -->
+                <div class="admin-section-block admin-stats-block admin-role-only" id="dash-admin-stats">
+                    <div class="section-header">
+                        <h4>System Overview</h4>
+                        <span class="live-pill">● Live</span>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-card" data-stat-filter="all">
+                            <span class="stat-num" id="stat-total-users">0</span>
+                            <span class="stat-label">Total Users</span>
+                        </div>
+                        <div class="stat-card" data-stat-filter="Marketing">
+                            <span class="stat-num" id="stat-marketing">0</span>
+                            <span class="stat-label">Marketing</span>
+                        </div>
+                        <div class="stat-card" data-stat-filter="IT">
+                            <span class="stat-num" id="stat-it">0</span>
+                            <span class="stat-label">IT Dept</span>
+                        </div>
+                        <div class="stat-card admin-super-only" data-stat-filter="super_admin">
+                            <span class="stat-num" id="stat-super-admins">0</span>
+                            <span class="stat-label">Super Admins</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sales Snapshot (Super Admin only) -->
+                <div class="admin-section-block admin-super-only" id="dash-sales-summary">
+                    <div class="section-header">
+                        <h4>Sales Snapshot</h4>
+                        <button type="button" class="link-btn" id="btn-jump-to-sales">View All →</button>
+                    </div>
+                    <div class="sales-quick-grid">
+                        <div class="mini-stat">
+                            <span class="mini-label">Products</span>
+                            <strong id="dash-sales-products">0</strong>
+                        </div>
+                        <div class="mini-stat">
+                            <span class="mini-label">Items Sold</span>
+                            <strong id="dash-sales-sold">0</strong>
+                        </div>
+                        <div class="mini-stat">
+                            <span class="mini-label">In Stock</span>
+                            <strong id="dash-sales-stock">0</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mobile Quick Shortcuts -->
+                <div class="quick-shortcuts-section">
+                    <h4>Quick Actions</h4>
+                    <div class="shortcut-pills">
+                        <button type="button" class="shortcut-btn" id="shortcut-security">
+                            <span class="sc-icon">🛡️</span>
+                            <span>Security</span>
+                        </button>
+                        <button type="button" class="shortcut-btn admin-super-only" id="shortcut-add-sale">
+                            <span class="sc-icon">💰</span>
+                            <span>Record Sale</span>
+                        </button>
+                        <button type="button" class="shortcut-btn admin-super-only" id="shortcut-add-product">
+                            <span class="sc-icon">📦</span>
+                            <span>Add Item</span>
+                        </button>
+                        <button type="button" class="shortcut-btn admin-role-only" id="shortcut-add-user">
+                            <span class="sc-icon">➕</span>
+                            <span>New User</span>
+                        </button>
+                        <button type="button" class="shortcut-btn admin-role-only" id="shortcut-view-logs">
+                            <span class="sc-icon">📋</span>
+                            <span>Audit Logs</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Recent Activity Feed -->
+                <div class="admin-section-block" id="dash-recent-activity">
+                    <div class="section-header">
+                        <h4>Recent Activity</h4>
+                        <button type="button" class="btn-xs btn-ghost" id="btn-refresh-activity">↻</button>
+                    </div>
+                    <div class="activity-timeline" id="dash-activity-list">
+                        <div class="timeline-empty">Loading latest audit events...</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. USERS MANAGEMENT VIEW (Admins & Dept Managers) -->
+            <section class="mobile-view" id="pane-users" hidden>
+                <div class="view-header-row">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <h3>Team &amp; Users</h3>
+                            <span class="live-pill" id="users-firestore-sync-pill">● Cloud Firestore</span>
+                        </div>
+                        <p class="sub-muted" id="users-directory-count-label">Synchronizing enterprise directory...</p>
+                    </div>
+                    <div style="display: flex; gap: 6px;">
+                        <button type="button" class="btn btn-sm btn-ghost" id="btn-refresh-users-deck" title="Sync from Cloud Firestore">↻</button>
+                        <button type="button" class="btn btn-sm btn-primary" id="btn-open-create-user">➕ Add</button>
+                    </div>
+                </div>
+
+                <!-- Mobile Search & Filter Bar -->
+                <div class="search-filter-box">
+                    <div class="search-input-wrap">
+                        <span class="search-icon">🔍</span>
+                        <input type="search" id="user-search-input" placeholder="Search by name or email...">
+                    </div>
+                    <div class="filter-chips-scroll" id="user-filter-chips">
+                        <button type="button" class="filter-chip active" data-filter-role="all">All</button>
+                        <button type="button" class="filter-chip admin-super-only" data-filter-role="super_admin">Super Admins</button>
+                        <button type="button" class="filter-chip" data-filter-role="marketing_admin">Marketing</button>
+                        <button type="button" class="filter-chip" data-filter-role="it_manager">IT</button>
+                        <button type="button" class="filter-chip" data-filter-role="user">Standard</button>
+                    </div>
+                </div>
+
+                <!-- User Cards List (Mobile-optimized cards instead of wide tables) -->
+                <div class="user-cards-deck" id="user-cards-container">
+                    <div class="deck-loading">Loading users...</div>
+                </div>
+            </section>
+
+            <!-- 3. SALES INFORMATION VIEW (Super Admin Only) -->
+            <section class="mobile-view" id="pane-sales" hidden>
+                <div class="view-header-row">
+                    <div>
+                        <h3>Sales &amp; Inventory</h3>
+                        <p class="sub-muted">Tim's Manufacturing warehouse catalog</p>
+                    </div>
+                    <div style="display: flex; gap: 6px;">
+                        <button type="button" class="btn btn-sm btn-outline" id="btn-top-add-product">📦 + Item</button>
+                        <button type="button" class="btn btn-sm btn-primary" id="btn-open-record-sale">🧾 + Sale</button>
+                    </div>
+                </div>
+
+                <!-- Sales Summary Metrics -->
+                <div class="sales-kpi-cards">
+                    <div class="kpi-card">
+                        <span class="kpi-title">Products</span>
+                        <strong class="kpi-val" id="sales-kpi-products">0</strong>
+                    </div>
+                    <div class="kpi-card">
+                        <span class="kpi-title">Items Sold</span>
+                        <strong class="kpi-val" id="sales-kpi-sold">0</strong>
+                    </div>
+                    <div class="kpi-card">
+                        <span class="kpi-title">Stock</span>
+                        <strong class="kpi-val" id="sales-kpi-stock">0</strong>
+                    </div>
+                    <div class="kpi-card">
+                        <span class="kpi-title">Deleted</span>
+                        <strong class="kpi-val" id="sales-kpi-deleted">0</strong>
+                    </div>
+                </div>
+
+                <!-- Record New Sale Hero Action Banner -->
+                <div class="sales-hero-card">
+                    <div class="sales-hero-body">
+                        <span class="sales-hero-badge">📦 Quick Dispatch</span>
+                        <h4>Record New Sale</h4>
+                        <p class="sales-hero-sub">Deduct items from stock and generate verified audit receipt.</p>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-touch sales-hero-cta" id="btn-hero-record-sale">
+                        <span>➕ Record Sale</span>
+                    </button>
+                </div>
+
+                <!-- Sub-Tabs for Sales (Inventory vs Sales History vs Deleted) -->
+                <div class="sales-tab-bar">
+                    <button type="button" class="sales-tab active" data-sales-tab="products">Inventory</button>
+                    <button type="button" class="sales-tab" data-sales-tab="history">Sales Log</button>
+                    <button type="button" class="sales-tab" data-sales-tab="deleted">Deleted</button>
+                </div>
+
+                <!-- Products Deck -->
+                <div class="sales-tab-panel" id="sales-panel-products">
+                    <!-- Dedicated Inflow Action Card -->
+                    <div class="inventory-inflow-card">
+                        <div class="inflow-icon">📦</div>
+                        <div class="inflow-body">
+                            <h5>Add Items to Inventory</h5>
+                            <p>Register new products and assign starting quantities for sale.</p>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-primary btn-touch" id="btn-inflow-add-product">
+                            <span>+ Add Item</span>
+                        </button>
+                    </div>
+
+                    <div class="sub-header-row">
+                        <h5>Current Warehouse Stock</h5>
+                        <button type="button" class="btn-xs btn-outline" id="btn-open-add-product">+ Add Product</button>
+                    </div>
+                    <div class="product-cards-list" id="sales-products-deck"></div>
+                </div>
+
+                <!-- Active Sales Log -->
+                <div class="sales-tab-panel" id="sales-panel-history" hidden>
+                    <h5>Recent Transactions</h5>
+                    <div class="sales-records-deck" id="sales-records-deck"></div>
+                </div>
+
+                <!-- Deleted Sales Records (Soft Deleted) -->
+                <div class="sales-tab-panel" id="sales-panel-deleted" hidden>
+                    <div class="info-alert">Deleted sales records return stock to inventory. You can restore them below.</div>
+                    <div class="sales-records-deck" id="sales-deleted-deck"></div>
+                </div>
+            </section>
+
+            <!-- 4. SECURITY & 2FA SETTINGS VIEW -->
+            <section class="mobile-view" id="pane-security" hidden>
+                <div class="view-header-row">
+                    <div>
+                        <h3>Security &amp; 2FA</h3>
+                        <p class="sub-muted">Device and authentication safeguards</p>
+                    </div>
+                </div>
+
+                <!-- Security Posture Overview Banner -->
+                <div class="security-posture-banner">
+                    <div class="posture-body">
+                        <span class="posture-tag">Multi-Layer Infosec Defense</span>
+                        <h4 class="posture-title">Zero-Trust Device Security</h4>
+                        <p class="posture-sub">TOTP Authenticator • PBKDF2 Salted Hashes • Local PIN Lock</p>
+                    </div>
+                    <div class="posture-badge-icon">🛡️</div>
+                </div>
+
+                <!-- Authenticator Setup Card -->
+                <div class="card-surface">
+                    <div class="card-icon-header">
+                        <span class="card-lead-icon">📱</span>
+                        <div>
+                            <h4>Authenticator App (TOTP)</h4>
+                            <p class="sub-muted" id="sec-totp-status">Checking status...</p>
+                        </div>
+                    </div>
+                    <div class="toggle-row" style="margin-bottom: 12px; padding: 4px 0;">
+                        <span>Enable Authenticator 2FA</span>
+                        <label class="switch">
+                            <input type="checkbox" id="toggle-authenticator-app">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div id="totp-setup-block">
+                        <button type="button" class="btn btn-outline btn-block" id="btn-start-totp-setup">Set Up Authenticator App</button>
+                        <div id="totp-qr-container" class="totp-drawer" hidden>
+                            <p class="small-text">Scan this QR code with Google Authenticator, Microsoft Authenticator, or 1Password:</p>
+                            <div class="qr-wrapper">
+                                <img id="sec-qr-img" alt="TOTP QR Code" class="qr-image" hidden>
+                            </div>
+                            <div class="manual-key-box">
+                                <span class="manual-key-label">Manual Setup Key:</span>
+                                <code id="sec-manual-key" class="manual-code">------</code>
+                                <div style="display: flex; gap: 6px; margin-top: 6px;">
+                                    <button type="button" class="btn-xs btn-secondary" id="btn-copy-totp-key">Copy Key</button>
+                                    <button type="button" class="btn-xs btn-outline" id="btn-regen-totp-key" title="Generate a brand new secret key">🔄 Generate New Key</button>
+                                </div>
+                            </div>
+                            <div class="totp-instructions-card" style="background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.15); border-radius: 10px; padding: 12px 14px; margin: 14px 0;">
+                                <div style="display: flex; align-items: flex-start; gap: 10px;">
+                                    <span style="font-size: 18px; line-height: 1;">📱</span>
+                                    <div style="font-size: 12px; color: var(--text, #1e293b); line-height: 1.45;">
+                                        <strong>Enter Code from Authenticator App:</strong>
+                                        <p style="margin: 4px 0 0 0; color: var(--text-muted, #64748b);">Scan the QR code or add the Manual Setup Key into your authenticator app (Google Authenticator, Microsoft Authenticator). Then, enter the 6-digit verification code generated by your app below.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <form id="totp-confirm-form" autocomplete="off" novalidate>
+                                <div class="form-field">
+                                    <label for="totp-code-confirm">6-Digit Code from Authenticator App</label>
+                                    <div class="input-control">
+                                        <span class="field-icon">🔢</span>
+                                        <input type="text" id="totp-code-confirm" inputmode="numeric" autocomplete="off" maxlength="6" placeholder="Enter 6-digit code from app" class="otp-input" required>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-block btn-touch">Confirm &amp; Enable 2FA</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- Salt & Pepper Cryptography Proof (5 Users Same Password Demo) -->
+                <div class="card-surface">
+                    <div class="card-icon-header">
+                        <span class="card-lead-icon">🧂</span>
+                        <div>
+                            <h4>Salt &amp; Pepper Cryptography Proof</h4>
+                            <p class="sub-muted">5 different users registered with the EXACT same password</p>
+                        </div>
+                    </div>
+                    <div class="salt-demo-banner">
+                        <span class="salt-badge-label">Tested Plain Password:</span>
+                        <code class="salt-code-pill">CompanySecret123!@#</code>
+                    </div>
+                    <div class="salt-table-wrap">
+                        <table class="salt-table">
+                            <thead>
+                                <tr>
+                                    <th>User Account</th>
+                                    <th>Unique Salt (16-Byte Hex)</th>
+                                    <th>Stored Database Hash (Peppered)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="salt-demo-table-body">
+                                <!-- Populated dynamically by app.js -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="salt-footer-note">
+                        <small>🛡️ <strong>InfoSec Defense:</strong> Every user has an identical password, yet all 5 database hashes are completely distinct because of per-user salts and server-side pepper.</small>
+                    </div>
+                </div>
+
+                <!-- Mobile Quick PIN / Screen Lock -->
+                <div class="card-surface">
+                    <div class="card-icon-header">
+                        <span class="card-lead-icon">🔒</span>
+                        <div>
+                            <h4>Mobile Screen Lock</h4>
+                            <p class="sub-muted">Require 4-digit PIN unlock when app is locked or minimized</p>
+                        </div>
+                    </div>
+                    <div class="toggle-row">
+                        <span>Require App PIN Unlock</span>
+                        <label class="switch">
+                            <input type="checkbox" id="toggle-mobile-pin">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <p class="pin-status-text" id="sec-pin-status">Disabled: Turn switch ON to set a 4-digit PIN.</p>
+                    <div id="pin-lock-actions-row" class="pin-lock-actions-row" hidden>
+                        <button type="button" class="btn btn-primary btn-block btn-touch" id="btn-lock-screen-now">
+                            <span>🔒 Lock App Screen Now</span>
+                        </button>
+                        <button type="button" class="btn btn-ghost btn-block" id="btn-change-pin">
+                            <span>Change 4-Digit PIN</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 5. USER PROFILE VIEW (Decorated Enterprise Profile) -->
+            <section class="mobile-view" id="pane-profile" hidden>
+                <!-- Hero Profile Card with Gradient Backdrop & Avatar Ring -->
+                <div class="profile-hero-card">
+                    <div class="profile-cover-banner"></div>
+                    <div class="profile-avatar-wrapper">
+                        <div class="profile-avatar-large" id="profile-avatar-large">U</div>
+                        <span class="profile-online-badge" title="Active Session">●</span>
+                    </div>
+                    <h3 id="prof-name">User Name</h3>
+                    <div class="profile-email-badge">
+                        <span class="prof-email" id="prof-email">user@tim-mfg.com</span>
+                        <span class="prof-verified-pill">✓ Verified</span>
+                    </div>
+                    <div class="profile-badges-row">
+                        <span class="prof-tag" id="prof-role">User</span>
+                        <span class="prof-tag dept" id="prof-dept">Department</span>
+                        <span class="prof-tag tag-pill-cloud">☁️ Firestore Sync</span>
+                    </div>
+                </div>
+
+                <!-- Profile Quick Shortcuts Grid -->
+                <div class="profile-shortcuts-grid">
+                    <button type="button" class="profile-shortcut-card" id="prof-btn-security">
+                        <div class="sc-icon-wrap" style="background:#eff6ff;color:#2563eb;">🛡️</div>
+                        <div class="sc-info">
+                            <strong>Security &amp; 2FA</strong>
+                            <small>TOTP &amp; Keys</small>
+                        </div>
+                    </button>
+                    <button type="button" class="profile-shortcut-card" id="prof-btn-pin">
+                        <div class="sc-icon-wrap" style="background:#f5f3ff;color:#7c3aed;">🔢</div>
+                        <div class="sc-info">
+                            <strong>Screen PIN</strong>
+                            <small>App Lock Setup</small>
+                        </div>
+                    </button>
+                    <button type="button" class="profile-shortcut-card admin-role-only" id="prof-btn-audit">
+                        <div class="sc-icon-wrap" style="background:#ecfdf5;color:#059669;">📋</div>
+                        <div class="sc-info">
+                            <strong>Audit Logs</strong>
+                            <small>Access History</small>
+                        </div>
+                    </button>
+                </div>
+
+                <!-- Account & Enterprise Identity Card -->
+                <div class="card-surface profile-details-card">
+                    <div class="card-icon-header" style="margin-bottom: 8px;">
+                        <span class="card-lead-icon">🪪</span>
+                        <div>
+                            <h4>Enterprise Account Credentials</h4>
+                            <p class="sub-muted">Cloud Firestore cryptographic metadata</p>
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label"><span class="detail-icon">🆔</span> Account ID</span>
+                        <span class="detail-val" id="prof-id">#1</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label"><span class="detail-icon">🏢</span> Department</span>
+                        <span class="detail-val" id="prof-dept-text">General</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label"><span class="detail-icon">🔐</span> Two-Factor Auth</span>
+                        <span class="detail-val text-success" id="prof-2fa-status">Protected</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label"><span class="detail-icon">🛡️</span> Credential Vault</span>
+                        <span class="detail-val"><code class="crypto-meta-pill">PBKDF2 (100k + Salt)</code></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label"><span class="detail-icon">📅</span> Member Since</span>
+                        <span class="detail-val" id="prof-created">Oct 2026</span>
+                    </div>
+                </div>
+
+                <!-- Active Session Card -->
+                <div class="card-surface profile-session-card">
+                    <div class="card-icon-header">
+                        <span class="card-lead-icon">📱</span>
+                        <div>
+                            <h4>Active Mobile Session</h4>
+                            <p class="sub-muted">Local device security enforcement</p>
+                        </div>
+                    </div>
+                    <div class="session-status-row">
+                        <div class="session-stat-pill">
+                            <span class="stat-dot green"></span>
+                            <span>Session: <strong>Authenticated</strong></span>
+                        </div>
+                        <div class="session-stat-pill">
+                            <span class="stat-dot blue"></span>
+                            <span>Storage: <strong>Zero-Password</strong></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="profile-actions-block">
+                    <button type="button" class="btn btn-danger btn-block btn-touch" id="btn-profile-logout">
+                        <span>Sign Out of Mobile App</span>
+                        <span>⇥</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- 6. AUDIT LOGS VIEW (Enhanced & Filterable) -->
+            <section class="mobile-view" id="pane-logs" hidden>
+                <div class="view-header-row">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <h3>Security &amp; Audit Logs</h3>
+                            <span class="live-pill" id="audit-count-badge">● Live Feed</span>
+                        </div>
+                        <p class="sub-muted">Immutable tamper-proof enterprise audit trail</p>
+                    </div>
+                    <div style="display: flex; gap: 6px;">
+                        <button type="button" class="btn btn-sm btn-ghost" id="btn-refresh-audit-page" title="Refresh Audit Trail">↻</button>
+                        <button type="button" class="btn btn-sm btn-outline" id="btn-export-audit-csv" title="Export as CSV">📋 Export</button>
+                    </div>
+                </div>
+
+                <!-- Audit Search & Category Filter Bar -->
+                <div class="audit-filter-box">
+                    <div class="search-input-wrap">
+                        <span class="search-icon">🔍</span>
+                        <input type="search" id="audit-search-input" placeholder="Search actor, action, or details...">
+                    </div>
+                    <div class="filter-chips-scroll" id="audit-filter-chips">
+                        <button type="button" class="filter-chip active" data-filter-audit="all">All Events</button>
+                        <button type="button" class="filter-chip" data-filter-audit="auth">🔐 Auth</button>
+                        <button type="button" class="filter-chip" data-filter-audit="users">👥 Team</button>
+                        <button type="button" class="filter-chip" data-filter-audit="inventory">📦 Inventory</button>
+                        <button type="button" class="filter-chip" data-filter-audit="security">🛡️ Security</button>
+                    </div>
+                </div>
+
+                <!-- Compliance Banner -->
+                <div class="audit-compliance-banner">
+                    <span class="comp-icon">⚖️</span>
+                    <div>
+                        <strong>Cryptographic Non-Repudiation</strong>
+                        <p>All administrative modifications, logins, and inventory operations are permanently recorded.</p>
+                    </div>
+                </div>
+
+                <!-- Full Activity Timeline List -->
+                <div class="activity-timeline full-timeline" id="full-audit-list"></div>
+            </section>
+
+            <!-- 7. BACKUP & RESTORE VIEW (Super Admin Only - Decorated) -->
+            <section class="mobile-view" id="pane-backups" hidden>
+                <!-- View Header -->
+                <div class="view-header-row">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <h3>Encrypted Backups</h3>
+                            <span class="live-pill">● AES-256</span>
+                        </div>
+                        <p class="sub-muted">AES-256-GCM encrypted database snapshots</p>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-primary" id="btn-create-backup-now">
+                        <span>Create Snapshot</span>
+                        <span>➕</span>
+                    </button>
+                </div>
+
+                <!-- Backup KPI Grid -->
+                <div class="backup-kpi-grid">
+                    <div class="backup-kpi-card">
+                        <span class="bkpi-icon">💾</span>
+                        <div class="bkpi-info">
+                            <span class="bkpi-label">Total Snapshots</span>
+                            <strong class="bkpi-val" id="backup-kpi-count">1</strong>
+                        </div>
+                    </div>
+                    <div class="backup-kpi-card">
+                        <span class="bkpi-icon">🔒</span>
+                        <div class="bkpi-info">
+                            <span class="bkpi-label">Cipher Standard</span>
+                            <strong class="bkpi-val">AES-256-GCM</strong>
+                        </div>
+                    </div>
+                    <div class="backup-kpi-card">
+                        <span class="bkpi-icon">☁️</span>
+                        <div class="bkpi-info">
+                            <span class="bkpi-label">Storage Target</span>
+                            <strong class="bkpi-val">Firestore</strong>
+                        </div>
+                    </div>
+                    <div class="backup-kpi-card">
+                        <span class="bkpi-icon">🛡️</span>
+                        <div class="bkpi-info">
+                            <span class="bkpi-label">SHA-256 Hash</span>
+                            <strong class="bkpi-val">Signed</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Security Explainer Banner -->
+                <div class="backup-security-banner">
+                    <span class="sec-banner-icon">🔐</span>
+                    <div class="sec-banner-text">
+                        <strong>Zero-Knowledge Disaster Recovery</strong>
+                        <p>Backups contain user credentials and sales records encrypted with AES-256-GCM. Plaintext never touches unauthenticated endpoints.</p>
+                    </div>
+                </div>
+
+                <!-- Backup Archives List Card -->
+                <div class="card-surface backup-archive-card">
+                    <div class="card-icon-header">
+                        <span class="card-lead-icon">📦</span>
+                        <div>
+                            <h4>Encrypted Snapshot Archives</h4>
+                            <p class="sub-muted">Immutable offline recovery archives</p>
+                        </div>
+                    </div>
+                    <div class="backup-list" id="mobile-backup-list">
+                        <p class="deck-loading">No recent backups found.</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- ========================================== -->
+        <!-- MOBILE BOTTOM NAVIGATION BAR -->
+        <!-- ========================================== -->
+        <nav class="mobile-bottom-nav" aria-label="Mobile Navigation">
+            <button type="button" class="nav-item active" data-nav-target="dashboard">
+                <span class="nav-icon">🏠</span>
+                <span class="nav-label">Home</span>
+            </button>
+            <button type="button" class="nav-item admin-role-only" data-nav-target="users">
+                <span class="nav-icon">👥</span>
+                <span class="nav-label">Users</span>
+            </button>
+            <button type="button" class="nav-item admin-super-only" data-nav-target="sales">
+                <span class="nav-icon">📊</span>
+                <span class="nav-label">Sales</span>
+            </button>
+            <button type="button" class="nav-item" data-nav-target="security">
+                <span class="nav-icon">🛡️</span>
+                <span class="nav-label">Security</span>
+            </button>
+            <button type="button" class="nav-item" data-nav-target="profile">
+                <span class="nav-icon">👤</span>
+                <span class="nav-label">Profile</span>
+            </button>
+        </nav>
+
+        <!-- ========================================== -->
+        <!-- MOBILE SLIDE-OVER DRAWER (For extra menu items) -->
+        <!-- ========================================== -->
+        <div id="mobile-drawer-overlay" class="drawer-overlay" hidden></div>
+        <aside id="mobile-drawer" class="mobile-drawer" hidden>
+            <div class="drawer-header">
+                <div class="drawer-user-info">
+                    <span class="app-logo-mini">🔐</span>
+                    <div>
+                        <strong>SecureApp</strong>
+                        <small id="drawer-email">user@tim-mfg.com</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close-drawer" id="btn-close-drawer">✕</button>
+            </div>
+            <div class="drawer-links">
+                <p class="drawer-section-heading">Overview</p>
+                <button type="button" class="drawer-link" data-drawer-nav="dashboard">🏠 &nbsp; Dashboard</button>
+                <button type="button" class="drawer-link" data-drawer-nav="profile">👤 &nbsp; User Profile</button>
+                
+                <p class="drawer-section-heading admin-role-only">Enterprise Operations</p>
+                <button type="button" class="drawer-link admin-role-only" data-drawer-nav="users">👥 &nbsp; User Directory</button>
+                <button type="button" class="drawer-link admin-super-only" data-drawer-nav="sales">📊 &nbsp; Sales &amp; Inventory</button>
+                
+                <p class="drawer-section-heading">Security &amp; Governance</p>
+                <button type="button" class="drawer-link" data-drawer-nav="security">🛡️ &nbsp; Security &amp; 2FA</button>
+                <button type="button" class="drawer-link admin-role-only" data-drawer-nav="logs">📋 &nbsp; Audit Logs</button>
+                <button type="button" class="drawer-link admin-super-only" data-drawer-nav="backups">💾 &nbsp; Backup &amp; Restore</button>
+                
+                <hr class="drawer-divider">
+                <button type="button" class="drawer-link text-danger" id="drawer-logout-btn">⇥ &nbsp; Sign Out</button>
+            </div>
+            <div class="drawer-footer">
+                <small>SecureApp Mobile v2.0 • Tim's Mfg</small>
+            </div>
+        </aside>
+
+        <!-- ========================================== -->
+        <!-- MOBILE BOTTOM MODAL SHEETS (For editing/adding) -->
+        <!-- ========================================== -->
+        
+        <!-- Sheet 1: Create User Modal Sheet (Decorated & Styled) -->
+        <div id="sheet-create-user" class="modal-sheet-overlay" hidden>
+            <div class="modal-sheet modal-sheet-user">
+                <div class="sheet-handle"></div>
+                
+                <!-- Branded Header -->
+                <div class="sheet-header sheet-header-branded">
+                    <div class="sheet-title-group">
+                        <div class="sheet-header-badge-icon badge-create-user-gradient" id="create-user-badge-icon">➕</div>
+                        <div>
+                            <div class="sheet-pill-tag">Directory Provisioning</div>
+                            <h4>Add New User</h4>
+                            <p class="sub-muted">Cloud Firestore PBKDF2 salt &amp; pepper credential creation</p>
+                        </div>
+                    </div>
+                    <button type="button" class="sheet-close-btn" data-close-sheet aria-label="Close">✕</button>
+                </div>
+
+                <form id="sheet-user-form" autocomplete="off" novalidate>
+                    <!-- Live Dynamic New User Preview Card -->
+                    <div class="user-overview-card" id="create-user-preview-card">
+                        <div class="overview-avatar-circle avatar-create-gradient" id="create-user-avatar-circle">＋</div>
+                        <div class="overview-info">
+                            <div class="overview-header-row">
+                                <strong id="create-user-display-name">New Team Member</strong>
+                                <span class="status-pill-badge pill-active">● Active (New)</span>
+                            </div>
+                            <div class="overview-sub" id="create-user-display-email">user@tim-mfg.com</div>
+                            <div class="overview-badges-row">
+                                <span class="tag-badge tag-role" id="create-user-role-badge">Standard User</span>
+                                <span class="tag-badge tag-dept" id="create-user-dept-badge">General</span>
+                                <span class="tag-badge" style="background:#ecfdf5;color:#047857;">🔐 2FA Ready</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Field 1: Full Name -->
+                    <div class="form-field">
+                        <label for="sheet-user-name">Full Name</label>
+                        <div class="input-control">
+                            <span class="field-icon">👤</span>
+                            <input type="text" id="sheet-user-name" required placeholder="e.g. Alex Boakye" autocomplete="name">
+                        </div>
+                    </div>
+
+                    <!-- Field 2: Email Address -->
+                    <div class="form-field">
+                        <div class="label-row">
+                            <label for="sheet-user-email">Email Address</label>
+                            <span class="key-immutable-pill">☁️ Firestore Identity</span>
+                        </div>
+                        <div class="input-control">
+                            <span class="field-icon">✉</span>
+                            <input type="email" id="sheet-user-email" required placeholder="alex@tim-mfg.com" autocomplete="email">
+                        </div>
+                        <small class="field-help-text">Used for sign-in and delivery of multi-factor OTP verification codes.</small>
+                    </div>
+
+                    <!-- Field 3: Temporary Password -->
+                    <div class="form-field">
+                        <div class="label-row">
+                            <label for="sheet-user-password">Temporary Password</label>
+                            <button type="button" class="btn-link-xs" id="btn-generate-user-pw">⚡ Auto-Generate</button>
+                        </div>
+                        <div class="input-control">
+                            <span class="field-icon">🔒</span>
+                            <input type="password" id="sheet-user-password" required minlength="8" placeholder="Enter or generate temporary password" autocomplete="new-password">
+                            <button type="button" class="btn-toggle-pw" id="sheet-user-pw-toggle" aria-label="Toggle password visibility">👁</button>
+                        </div>
+                        <div class="pw-req-hint">
+                            <span>✓ Minimum 8 characters</span> • <span>Salted &amp; Peppered (100k PBKDF2)</span>
+                        </div>
+                    </div>
+
+                    <!-- Field 4: Department Selection with Quick Chips -->
+                    <div class="form-field">
+                        <label for="sheet-user-dept">Department</label>
+                        <div class="input-control">
+                            <span class="field-icon">🏢</span>
+                            <select id="sheet-user-dept">
+                                <option value="">None / General</option>
+                                <option value="Marketing">Marketing</option>
+                                <option value="IT">IT</option>
+                                <option value="Sales">Sales</option>
+                                <option value="Logistics">Logistics</option>
+                                <option value="Management">Management</option>
+                            </select>
+                        </div>
+                        <!-- Quick Department Selector Chips -->
+                        <div class="quick-dept-chips" id="create-dept-chips">
+                            <span class="pills-label">Quick:</span>
+                            <button type="button" class="btn-dept-chip" data-dept="Marketing">Marketing</button>
+                            <button type="button" class="btn-dept-chip" data-dept="IT">IT</button>
+                            <button type="button" class="btn-dept-chip" data-dept="Sales">Sales</button>
+                            <button type="button" class="btn-dept-chip" data-dept="Logistics">Logistics</button>
+                            <button type="button" class="btn-dept-chip" data-dept="Management">Management</button>
+                        </div>
+                    </div>
+
+                    <!-- Field 5: Security Role (Super Admin Only) -->
+                    <div class="form-field admin-super-only">
+                        <label for="sheet-user-role">Initial Security Role &amp; Access Tier</label>
+                        <div class="input-control">
+                            <span class="field-icon">🛡️</span>
+                            <select id="sheet-user-role">
+                                <option value="user" selected>Standard User (Department Access)</option>
+                                <option value="marketing_admin">Marketing Manager (Department Admin)</option>
+                                <option value="it_manager">IT Manager (IT Infrastructure Admin)</option>
+                                <option value="super_admin">Super Admin (Full Enterprise Access)</option>
+                            </select>
+                        </div>
+                        <!-- Role Description Callout Card -->
+                        <div class="role-desc-card" id="create-role-desc-card">
+                            <span class="role-desc-icon">ℹ️</span>
+                            <span class="role-desc-text" id="create-role-desc-text">
+                                Standard operational permissions within assigned department.
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Security & Cryptography Callout Banner -->
+                    <div class="provisioning-security-banner">
+                        <div class="sec-banner-icon">🛡️</div>
+                        <div class="sec-banner-text">
+                            <strong>Zero-Credential Client Architecture</strong>
+                            <p>Passwords are never stored in client browser storage. Credentials are cryptographically hashed on the server and persisted directly in Google Cloud Firestore.</p>
+                        </div>
+                    </div>
+
+                    <!-- Sheet Actions -->
+                    <div class="sheet-actions-row">
+                        <button type="button" class="btn btn-outline btn-touch flex-1" data-close-sheet>Cancel</button>
+                        <button type="submit" class="btn btn-primary btn-touch flex-2" id="btn-submit-create-user">
+                            <span>Provision User</span>
+                            <span class="btn-arrow">➕</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Sheet 2: Edit User Modal Sheet (Decorated & Styled) -->
+        <div id="sheet-edit-user" class="modal-sheet-overlay" hidden>
+            <div class="modal-sheet modal-sheet-user">
+                <div class="sheet-handle"></div>
+                
+                <!-- Branded Header -->
+                <div class="sheet-header sheet-header-branded">
+                    <div class="sheet-title-group">
+                        <div class="sheet-header-badge-icon badge-user-gradient" id="edit-user-badge-avatar">👤</div>
+                        <div>
+                            <div class="sheet-pill-tag">Directory Account</div>
+                            <h4 id="edit-user-sheet-title">Edit User Account</h4>
+                            <p class="sub-muted">Cloud Firestore credentials &amp; permissions</p>
+                        </div>
+                    </div>
+                    <button type="button" class="sheet-close-btn" data-close-sheet aria-label="Close">✕</button>
+                </div>
+
+                <form id="sheet-edit-user-form" autocomplete="off" novalidate>
+                    <input type="hidden" id="edit-user-id">
+
+                    <!-- Live User Overview Card -->
+                    <div class="user-overview-card" id="edit-user-overview-card">
+                        <div class="overview-avatar-circle" id="edit-user-avatar-circle">U</div>
+                        <div class="overview-info">
+                            <div class="overview-header-row">
+                                <strong id="edit-user-display-name">User Name</strong>
+                                <span class="status-pill-badge pill-active" id="edit-user-status-pill">● Active</span>
+                            </div>
+                            <div class="overview-sub" id="edit-user-display-email">user@tim-mfg.com</div>
+                            <div class="overview-badges-row">
+                                <span class="tag-badge tag-role" id="edit-user-role-badge">Standard User</span>
+                                <span class="tag-badge tag-dept" id="edit-user-dept-badge">General</span>
+                                <span class="tag-badge" id="edit-user-2fa-badge">🔐 2FA</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Field 1: Full Name -->
+                    <div class="form-field">
+                        <label for="edit-user-name">Full Name</label>
+                        <div class="input-control">
+                            <span class="field-icon">👤</span>
+                            <input type="text" id="edit-user-name" required placeholder="Full Name">
+                        </div>
+                    </div>
+
+                    <!-- Field 2: Email Address (Document Key) -->
+                    <div class="form-field">
+                        <div class="label-row">
+                            <label for="edit-user-email">Email Address</label>
+                            <span class="key-immutable-pill">🔒 Firestore Key</span>
+                        </div>
+                        <div class="input-control input-control-readonly">
+                            <span class="field-icon">✉</span>
+                            <input type="email" id="edit-user-email" required readonly>
+                        </div>
+                        <small class="field-help-text">Unique Cloud Firestore document identifier (immutable account key).</small>
+                    </div>
+
+                    <!-- Field 3: Department -->
+                    <div class="form-field">
+                        <label for="edit-user-dept">Department</label>
+                        <div class="input-control">
+                            <span class="field-icon">🏢</span>
+                            <select id="edit-user-dept">
+                                <option value="">None / General</option>
+                                <option value="Marketing">Marketing</option>
+                                <option value="IT">IT</option>
+                                <option value="Sales">Sales</option>
+                                <option value="Logistics">Logistics</option>
+                                <option value="Management">Management</option>
+                            </select>
+                        </div>
+                        <!-- Quick Department Selector Chips -->
+                        <div class="quick-dept-chips" id="edit-dept-chips">
+                            <span class="pills-label">Quick:</span>
+                            <button type="button" class="btn-dept-chip" data-dept="Marketing">Marketing</button>
+                            <button type="button" class="btn-dept-chip" data-dept="IT">IT</button>
+                            <button type="button" class="btn-dept-chip" data-dept="Sales">Sales</button>
+                            <button type="button" class="btn-dept-chip" data-dept="Logistics">Logistics</button>
+                            <button type="button" class="btn-dept-chip" data-dept="Management">Management</button>
+                        </div>
+                    </div>
+
+                    <!-- Field 4: Role (Super Admin Only) -->
+                    <div class="form-field admin-super-only">
+                        <label for="edit-user-role">Security Role &amp; Access Tier</label>
+                        <div class="input-control">
+                            <span class="field-icon">🛡️</span>
+                            <select id="edit-user-role">
+                                <option value="user">Standard User (Department Access)</option>
+                                <option value="marketing_admin">Marketing Manager (Department Admin)</option>
+                                <option value="it_manager">IT Manager (IT Infrastructure Admin)</option>
+                                <option value="super_admin">Super Admin (Full Enterprise Access)</option>
+                            </select>
+                        </div>
+                        <!-- Role Description Callout Card -->
+                        <div class="role-desc-card" id="edit-role-desc-card">
+                            <span class="role-desc-icon">ℹ️</span>
+                            <span class="role-desc-text" id="edit-role-desc-text">
+                                Standard operational permissions within assigned department.
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Cloud Firestore Security & 2FA Info Card -->
+                    <div class="user-meta-summary-card">
+                        <div class="meta-card-row">
+                            <div class="meta-item">
+                                <span class="meta-label">Storage Backend</span>
+                                <span class="meta-val meta-val-green">● Cloud Firestore</span>
+                            </div>
+                            <div class="meta-item">
+                                <span class="meta-label">2FA Protection</span>
+                                <span class="meta-val" id="edit-user-meta-2fa">🔐 Active</span>
+                            </div>
+                            <div class="meta-item">
+                                <span class="meta-label">Account Created</span>
+                                <span class="meta-val" id="edit-user-meta-created">Verified</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sheet Actions -->
+                    <div class="sheet-actions-row">
+                        <button type="button" class="btn btn-outline btn-touch flex-1" data-close-sheet>Cancel</button>
+                        <button type="submit" class="btn btn-primary btn-touch flex-2" id="btn-save-user-changes">
+                            <span>Save Changes</span>
+                            <span class="btn-arrow">✓</span>
+                        </button>
+                    </div>
+
+                    <!-- Account Status & Danger Zone -->
+                    <div class="danger-zone-divider">
+                        <span>Account Status Management</span>
+                    </div>
+                    <button type="button" class="btn btn-outline-danger btn-block btn-touch" id="btn-sheet-delete-user">
+                        <span>🗑 Disable User Account</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Sheet 3: Record Sale Modal Sheet -->
+        <div id="sheet-record-sale" class="modal-sheet-overlay" hidden>
+            <div class="modal-sheet modal-sheet-sale">
+                <div class="sheet-handle"></div>
+                <div class="sheet-header sheet-header-branded">
+                    <div class="sheet-title-group">
+                        <div class="sheet-header-badge-icon">🧾</div>
+                        <div>
+                            <div class="sheet-pill-tag">Inventory Dispatch</div>
+                            <h4>Record New Sale</h4>
+                            <p class="sub-muted">Deduct stock &amp; record verified transaction</p>
+                        </div>
+                    </div>
+                    <button type="button" class="sheet-close-btn" data-close-sheet aria-label="Close">✕</button>
+                </div>
+
+                <form id="sheet-sale-form" autocomplete="off" novalidate>
+                    <!-- Field 1: Select Product -->
+                    <div class="form-field">
+                        <label for="sheet-sale-product">Select Inventory Product</label>
+                        <div class="input-control">
+                            <span class="field-icon">📦</span>
+                            <select id="sheet-sale-product" required>
+                                <option value="">Choose product...</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Selected Product Info Pill / Card -->
+                    <div id="sale-product-detail-card" class="sale-product-detail-card" hidden>
+                        <div class="prod-detail-main">
+                            <strong id="sale-detail-name">Product Name</strong>
+                            <span class="category-pill" id="sale-detail-cat">Category</span>
+                        </div>
+                        <div class="prod-detail-stock">
+                            <span class="stock-indicator-dot">●</span>
+                            <span id="sale-detail-stock-text">0 units available</span>
+                        </div>
+                    </div>
+
+                    <!-- Field 2: Quantity Sold -->
+                    <div class="form-field">
+                        <div class="label-row">
+                            <label for="sheet-sale-qty">Quantity to Sell</label>
+                            <span class="stock-avail-pill" id="sale-qty-avail-badge">Available: --</span>
+                        </div>
+                        <div class="input-control qty-stepper-control">
+                            <span class="field-icon">🔢</span>
+                            <input type="number" id="sheet-sale-qty" min="1" step="1" required placeholder="1" value="1">
+                            <div class="stepper-buttons">
+                                <button type="button" class="btn-stepper" id="btn-qty-minus" aria-label="Decrease quantity">−</button>
+                                <button type="button" class="btn-stepper" id="btn-qty-plus" aria-label="Increase quantity">+</button>
+                            </div>
+                        </div>
+
+                        <!-- Quick Touch Addition Chips -->
+                        <div class="quick-qty-pills">
+                            <span class="pills-label">Quick:</span>
+                            <button type="button" class="btn-qty-chip" data-qty="1">+1</button>
+                            <button type="button" class="btn-qty-chip" data-qty="5">+5</button>
+                            <button type="button" class="btn-qty-chip" data-qty="10">+10</button>
+                            <button type="button" class="btn-qty-chip" data-qty="25">+25</button>
+                            <button type="button" class="btn-qty-chip" data-qty="50">+50</button>
+                            <button type="button" class="btn-qty-chip chip-max" id="btn-qty-max">Max</button>
+                        </div>
+                    </div>
+
+                    <!-- Field 3: Sale Date -->
+                    <div class="form-field">
+                        <div class="label-row">
+                            <label for="sheet-sale-date">Sale / Dispatch Date</label>
+                            <button type="button" class="btn-link-xs" id="btn-sale-today">Set to Today</button>
+                        </div>
+                        <div class="input-control">
+                            <span class="field-icon">📅</span>
+                            <input type="date" id="sheet-sale-date" required>
+                        </div>
+                    </div>
+
+                    <!-- Live Inventory Impact / Transaction Preview Box -->
+                    <div id="sale-preview-card" class="sale-preview-card">
+                        <div class="preview-header">
+                            <span class="preview-icon">⚡</span>
+                            <span>Live Stock Impact</span>
+                        </div>
+                        <div class="preview-grid">
+                            <div class="preview-item">
+                                <span class="preview-lbl">Current Stock</span>
+                                <strong class="preview-val" id="prev-curr-stock">--</strong>
+                            </div>
+                            <div class="preview-item">
+                                <span class="preview-lbl">Deduction</span>
+                                <strong class="preview-val text-warning" id="prev-deduct-qty">--</strong>
+                            </div>
+                            <div class="preview-item highlight">
+                                <span class="preview-lbl">Remaining</span>
+                                <strong class="preview-val text-success" id="prev-after-stock">--</strong>
+                            </div>
+                        </div>
+                        <div id="sale-stock-warning" class="sale-stock-warning" hidden>
+                            ⚠️ Warning: Quantity exceeds current warehouse inventory!
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="sheet-actions-row">
+                        <button type="button" class="btn btn-outline flex-1 btn-touch" data-close-sheet>Cancel</button>
+                        <button type="submit" class="btn btn-primary flex-2 btn-touch" id="btn-submit-sale">
+                            <span>Record Sale</span>
+                            <span class="btn-arrow">✓</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Sheet 4: Add Product Modal Sheet -->
+        <div id="sheet-add-product" class="modal-sheet-overlay" hidden>
+            <div class="modal-sheet modal-sheet-inventory">
+                <div class="sheet-handle"></div>
+                <div class="sheet-header sheet-header-branded">
+                    <div class="sheet-title-group">
+                        <div class="sheet-header-badge-icon" style="background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); color: #059669;">📦</div>
+                        <div>
+                            <div class="sheet-pill-tag" style="background: #ecfdf5; color: #059669;">Inventory Inflow</div>
+                            <h4>Add New Inventory Item</h4>
+                            <p class="sub-muted">Register product &amp; set initial quantity for sale</p>
+                        </div>
+                    </div>
+                    <button type="button" class="sheet-close-btn" data-close-sheet aria-label="Close">✕</button>
+                </div>
+
+                <form id="sheet-product-form" autocomplete="off" novalidate>
+                    <div class="form-field">
+                        <label for="sheet-prod-name">Product Name</label>
+                        <div class="input-control">
+                            <span class="field-icon">🏷️</span>
+                            <input type="text" id="sheet-prod-name" required placeholder="e.g. Pure Honey 500g">
+                        </div>
+                    </div>
+
+                    <div class="form-field">
+                        <div class="label-row">
+                            <label for="sheet-prod-category">Product Category</label>
+                            <span class="pills-label">Quick select:</span>
+                        </div>
+                        <div class="input-control">
+                            <span class="field-icon">📁</span>
+                            <input type="text" id="sheet-prod-category" list="category-suggestions" required placeholder="Select or type category">
+                            <datalist id="category-suggestions">
+                                <option value="Beverages">
+                                <option value="Snacks">
+                                <option value="Bakery">
+                                <option value="Dairy">
+                                <option value="Packaging">
+                                <option value="General Goods">
+                            </datalist>
+                        </div>
+                        <div class="quick-category-chips">
+                            <button type="button" class="btn-cat-chip" data-cat="Beverages">Beverages</button>
+                            <button type="button" class="btn-cat-chip" data-cat="Snacks">Snacks</button>
+                            <button type="button" class="btn-cat-chip" data-cat="Bakery">Bakery</button>
+                            <button type="button" class="btn-cat-chip" data-cat="Packaging">Packaging</button>
+                        </div>
+                    </div>
+
+                    <div class="form-field">
+                        <div class="label-row">
+                            <label for="sheet-prod-stock">Starting Quantity for Selling</label>
+                            <span class="stock-avail-pill" style="background: #eef2ff; color: #4338ca; border-color: #c7d2fe;">Units in Stock</span>
+                        </div>
+                        <div class="input-control qty-stepper-control">
+                            <span class="field-icon">📦</span>
+                            <input type="number" id="sheet-prod-stock" min="1" step="1" required placeholder="e.g. 500" value="100">
+                            <div class="stepper-buttons">
+                                <button type="button" class="btn-stepper" id="btn-add-stock-minus" aria-label="Decrease quantity">−</button>
+                                <button type="button" class="btn-stepper" id="btn-add-stock-plus" aria-label="Increase quantity">+</button>
+                            </div>
+                        </div>
+                        <div class="quick-qty-pills">
+                            <span class="pills-label">Presets:</span>
+                            <button type="button" class="btn-qty-chip btn-add-preset" data-add="50">+50</button>
+                            <button type="button" class="btn-qty-chip btn-add-preset" data-add="100">+100</button>
+                            <button type="button" class="btn-qty-chip btn-add-preset" data-add="250">+250</button>
+                            <button type="button" class="btn-qty-chip btn-add-preset" data-add="500">+500</button>
+                            <button type="button" class="btn-qty-chip btn-add-preset" data-add="1000">+1000</button>
+                        </div>
+                    </div>
+
+                    <div class="sheet-actions-row">
+                        <button type="button" class="btn btn-outline flex-1 btn-touch" data-close-sheet>Cancel</button>
+                        <button type="submit" class="btn btn-primary flex-2 btn-touch">
+                            <span>Add Item to Inventory</span>
+                            <span class="btn-arrow">✓</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Sheet 5: Restock Product Modal Sheet -->
+        <div id="sheet-restock-product" class="modal-sheet-overlay" hidden>
+            <div class="modal-sheet modal-sheet-inventory">
+                <div class="sheet-handle"></div>
+                <div class="sheet-header sheet-header-branded">
+                    <div class="sheet-title-group">
+                        <div class="sheet-header-badge-icon" style="background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); color: #0284c7;">🔄</div>
+                        <div>
+                            <div class="sheet-pill-tag" style="background: #e0f2fe; color: #0284c7;">Stock Replenishment</div>
+                            <h4>Restock Product</h4>
+                            <p class="sub-muted" id="restock-prod-label">Adding units to warehouse inventory</p>
+                        </div>
+                    </div>
+                    <button type="button" class="sheet-close-btn" data-close-sheet aria-label="Close">✕</button>
+                </div>
+                <form id="sheet-restock-form" autocomplete="off" novalidate>
+                    <input type="hidden" id="restock-prod-id">
+
+                    <div class="form-field">
+                        <div class="label-row">
+                            <label for="restock-qty">Quantity to Add</label>
+                            <span class="stock-avail-pill">Inflow</span>
+                        </div>
+                        <div class="input-control qty-stepper-control">
+                            <span class="field-icon">➕</span>
+                            <input type="number" id="restock-qty" min="1" step="1" required placeholder="100" value="50">
+                            <div class="stepper-buttons">
+                                <button type="button" class="btn-stepper" id="btn-restock-minus">−</button>
+                                <button type="button" class="btn-stepper" id="btn-restock-plus">+</button>
+                            </div>
+                        </div>
+                        <div class="quick-qty-pills">
+                            <span class="pills-label">Presets:</span>
+                            <button type="button" class="btn-qty-chip btn-restock-preset" data-add="25">+25</button>
+                            <button type="button" class="btn-qty-chip btn-restock-preset" data-add="50">+50</button>
+                            <button type="button" class="btn-qty-chip btn-restock-preset" data-add="100">+100</button>
+                            <button type="button" class="btn-qty-chip btn-restock-preset" data-add="250">+250</button>
+                            <button type="button" class="btn-qty-chip btn-restock-preset" data-add="500">+500</button>
+                        </div>
+                    </div>
+                    <div class="sheet-actions-row">
+                        <button type="button" class="btn btn-outline flex-1 btn-touch" data-close-sheet>Cancel</button>
+                        <button type="submit" class="btn btn-primary flex-2 btn-touch">
+                            <span>Confirm Restock</span>
+                            <span class="btn-arrow">✓</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Sheet 6: Setup / Change PIN Modal Sheet (Decorated & Styled) -->
+        <div id="sheet-pin-setup" class="modal-sheet-overlay" hidden>
+            <div class="modal-sheet modal-sheet-pin">
+                <div class="sheet-handle"></div>
+                <!-- Branded Header -->
+                <div class="sheet-header sheet-header-branded">
+                    <div class="sheet-title-group">
+                        <div class="sheet-header-badge-icon badge-pin-gradient">🔒</div>
+                        <div>
+                            <div class="sheet-pill-tag">Device Protection</div>
+                            <h4 id="pin-setup-title">Set 4-Digit Security PIN</h4>
+                            <p class="sub-muted">Fast biometric &amp; screen unlock protection</p>
+                        </div>
+                    </div>
+                    <button type="button" class="sheet-close-btn" data-close-sheet aria-label="Close">✕</button>
+                </div>
+
+                <form id="pin-setup-form" autocomplete="off" novalidate>
+                    <!-- Visual PIN Preview Card -->
+                    <div class="pin-preview-card">
+                        <div class="pin-preview-icon">📱</div>
+                        <div class="pin-preview-info">
+                            <strong>Mobile Screen Lock</strong>
+                            <p>Used to unlock your device session when returning to the app without having to re-enter your password.</p>
+                        </div>
+                    </div>
+
+                    <div class="form-field">
+                        <label for="input-new-pin">Enter 4-Digit PIN</label>
+                        <div class="input-control pin-input-control">
+                            <span class="field-icon">🔒</span>
+                            <input type="password" id="input-new-pin" maxlength="4" inputmode="numeric" pattern="\d{4}" placeholder="••••" required autocomplete="new-password">
+                        </div>
+                    </div>
+                    <div class="form-field">
+                        <label for="input-confirm-pin">Confirm 4-Digit PIN</label>
+                        <div class="input-control pin-input-control">
+                            <span class="field-icon">✓</span>
+                            <input type="password" id="input-confirm-pin" maxlength="4" inputmode="numeric" pattern="\d{4}" placeholder="••••" required autocomplete="new-password">
+                        </div>
+                    </div>
+
+                    <!-- Security Note -->
+                    <div class="pin-security-note">
+                        <span>🛡️</span>
+                        <small>PINs are hashed using per-device salt and never transmitted in plaintext.</small>
+                    </div>
+
+                    <div class="sheet-actions-row">
+                        <button type="button" class="btn btn-outline flex-1 btn-touch" data-close-sheet>Cancel</button>
+                        <button type="submit" class="btn btn-primary flex-2 btn-touch">
+                            <span>Save PIN</span>
+                            <span class="btn-arrow">✓</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Sheet 7: Server Connection Settings Sheet (Executive Styled) -->
+        <div id="sheet-server-settings" class="modal-sheet-overlay" hidden>
+            <div class="modal-sheet modal-sheet-user">
+                <div class="sheet-drag-handle"></div>
+                <div class="sheet-header">
+                    <div class="sheet-title-badge">
+                        <span class="sheet-badge-icon">🌐</span>
+                        <div>
+                            <h3>Server Connection</h3>
+                            <p class="sheet-subtitle">Connect to SecureApp Host Machine on Wi-Fi</p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-sheet-close" data-close-sheet aria-label="Close">✕</button>
+                </div>
+
+                <form id="sheet-server-form" autocomplete="off" novalidate>
+                    <div class="form-field">
+                        <label for="server-url-input">Host API Base URL</label>
+                        <div class="input-control">
+                            <span class="field-icon">🔗</span>
+                            <input type="text" id="server-url-input" placeholder="http://192.168.0.100:3000" required>
+                        </div>
+                        <small style="color: var(--text-muted); font-size: 11px; margin-top: 5px; display: block;">
+                            Default: <code>http://192.168.0.100:3000</code>. Ensure your phone is connected to the same Wi-Fi network.
+                        </small>
+                    </div>
+
+                    <div style="display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;">
+                        <button type="button" id="btn-server-default-ip" class="chip" style="font-size: 11px; padding: 6px 12px; cursor: pointer;">
+                            ↺ Reset to 192.168.0.100:3000
+                        </button>
+                        <button type="button" id="btn-server-localhost-ip" class="chip" style="font-size: 11px; padding: 6px 12px; cursor: pointer;">
+                            💻 Localhost:3000
+                        </button>
+                    </div>
+
+                    <div id="server-test-result" style="padding: 10px 14px; border-radius: 8px; font-size: 12px; margin-bottom: 16px; display: none; line-height: 1.4;"></div>
+
+                    <div class="sheet-actions-row">
+                        <button type="button" id="btn-test-server-connection" class="btn btn-outline flex-1 btn-touch">
+                            <span>📡 Ping Server</span>
+                        </button>
+                        <button type="submit" class="btn btn-primary flex-1 btn-touch">
+                            <span>Save & Apply</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Sheet 8: Gmail OTP Cloud Relay Settings (For Mobile Cellular Data Delivery) -->
+        <div id="sheet-mail-relay" class="modal-sheet-overlay" hidden>
+            <div class="modal-sheet modal-sheet-user" style="max-height: 85vh; overflow-y: auto;">
+                <div class="sheet-drag-handle"></div>
+                <div class="sheet-header">
+                    <div class="sheet-title-badge">
+                        <span class="sheet-badge-icon">✉️</span>
+                        <div>
+                            <h3>Gmail OTP Cloud Relay</h3>
+                            <p class="sheet-subtitle">Mobile Cellular Delivery via Google Cloud</p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-sheet-close" data-close-sheet aria-label="Close">✕</button>
+                </div>
+
+                <div style="padding: 0 4px 16px;">
+                    <div style="background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; font-size: 12px; line-height: 1.5; color: var(--text-main, #1e293b);">
+                        <strong>💡 Cellular Network Compatibility:</strong><br>
+                        Mobile cellular networks (SIM cards) block outbound raw SMTP ports (465 &amp; 587). 
+                        A Google Apps Script Web App provides an official, 100% free HTTPS relay that sends emails directly from <strong>ayimnhyirahamos@gmail.com</strong> with <strong>0% PC connection required</strong>.
+                    </div>
+
+                    <div style="background: var(--bg-card, #ffffff); border: 1px solid var(--border-color, #e2e8f0); border-radius: 10px; padding: 14px; margin-bottom: 14px;">
+                        <h4 style="margin: 0 0 8px; font-size: 13px; font-weight: 700; color: var(--text-main, #0f172a);">📋 60-Second Setup Guide:</h4>
+                        <ol style="margin: 0; padding-left: 20px; font-size: 11.5px; line-height: 1.6; color: var(--text-muted, #475569);">
+                            <li>Open <a href="https://script.google.com" target="_blank" style="color: var(--primary, #3b82f6); font-weight: 600;">script.google.com</a> (signed in as <code>ayimnhyirahamos@gmail.com</code>).</li>
+                            <li>Click <strong>+ New project</strong> and paste the Google Apps Script below.</li>
+                            <li>Click <strong>Deploy ➔ New deployment</strong>, select type <strong>Web app</strong>:
+                                <ul style="padding-left: 16px; margin: 4px 0;">
+                                    <li>Execute as: <strong>Me (ayimnhyirahamos@gmail.com)</strong></li>
+                                    <li>Who has access: <strong>Anyone</strong></li>
+                                </ul>
+                            </li>
+                            <li>Click <strong>Deploy</strong>, authorize access, and copy your <strong>Web app URL</strong>.</li>
+                        </ol>
+
+                        <div style="margin-top: 10px; display: flex; gap: 8px;">
+                            <button type="button" id="btn-copy-apps-script" class="btn btn-outline btn-sm" style="font-size: 11.5px; padding: 6px 12px; font-weight: 600;">
+                                📋 Copy Google Apps Script Code
+                            </button>
+                        </div>
+                    </div>
+
+                    <form id="sheet-mail-relay-form" autocomplete="off" novalidate>
+                        <div class="form-field" style="margin-bottom: 12px;">
+                            <label for="relay-url-input" style="font-size: 12px; font-weight: 600;">Google Apps Script Web App URL</label>
+                            <div class="input-control">
+                                <span class="field-icon">🔗</span>
+                                <input type="url" id="relay-url-input" placeholder="https://script.google.com/macros/s/.../exec" required style="font-size: 12.5px;">
+                            </div>
+                            <small style="color: var(--text-muted, #64748b); font-size: 11px; margin-top: 4px; display: block;">
+                                Saved securely into Cloud Firestore so all mobile users benefit automatically.
+                            </small>
+                        </div>
+
+                        <div class="form-field" style="margin-bottom: 14px;">
+                            <label for="relay-test-email" style="font-size: 12px; font-weight: 600;">Test Recipient Email</label>
+                            <div class="input-control">
+                                <span class="field-icon">✉️</span>
+                                <input type="email" id="relay-test-email" placeholder="ayimnhyirahamos@gmail.com" value="ayimnhyirahamos@gmail.com" style="font-size: 12.5px;">
+                            </div>
+                        </div>
+
+                        <div id="relay-test-result" style="padding: 10px 14px; border-radius: 8px; font-size: 12px; margin-bottom: 14px; display: none; line-height: 1.4;"></div>
+
+                        <div class="sheet-actions-row">
+                            <button type="button" id="btn-test-relay" class="btn btn-outline flex-1 btn-touch">
+                                <span>✉️ Test Dispatch</span>
+                            </button>
+                            <button type="submit" class="btn btn-primary flex-1 btn-touch">
+                                <span>Save &amp; Activate</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- CUSTOM IN-APP CONFIRMATION MODAL (Replaces browser "localhost says" alerts) -->
+    <!-- ========================================== -->
+    <div id="confirm-modal-overlay" class="confirm-modal-overlay" hidden>
+        <div class="confirm-modal-card" role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title">
+            <div class="confirm-modal-icon-badge" id="confirm-modal-icon-badge">⚠️</div>
+            <h4 class="confirm-modal-title" id="confirm-modal-title">Confirm Action</h4>
+            <p class="confirm-modal-message" id="confirm-modal-message">Are you sure you want to proceed with this action?</p>
+            <div class="confirm-modal-details" id="confirm-modal-details" hidden></div>
+            <div class="confirm-modal-actions">
+                <button type="button" class="btn btn-outline btn-touch flex-1" id="confirm-modal-btn-cancel">Cancel</button>
+                <button type="button" class="btn btn-danger btn-touch flex-1" id="confirm-modal-btn-confirm">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FULL-SCREEN MOBILE PIN LOCK SCREEN OVERLAY -->
+    <div id="pin-lock-overlay" class="pin-lock-overlay" hidden>
+        <div class="pin-lock-container">
+            <div class="pin-lock-header">
+                <div class="pin-lock-avatar" id="pin-lock-avatar">U</div>
+                <h3 id="pin-lock-name">SecureApp Locked</h3>
+                <p class="pin-lock-instruction">Enter your 4-digit PIN to unlock</p>
+            </div>
+
+            <!-- 4-Dot Indicator -->
+            <div class="pin-dots-container" id="pin-dots-container">
+                <span class="pin-dot"></span>
+                <span class="pin-dot"></span>
+                <span class="pin-dot"></span>
+                <span class="pin-dot"></span>
+            </div>
+
+            <!-- Mobile Touch Numeric Keypad -->
+            <div class="pin-keypad-grid">
+                <button type="button" class="pin-key" data-digit="1">1</button>
+                <button type="button" class="pin-key" data-digit="2">2</button>
+                <button type="button" class="pin-key" data-digit="3">3</button>
+                <button type="button" class="pin-key" data-digit="4">4</button>
+                <button type="button" class="pin-key" data-digit="5">5</button>
+                <button type="button" class="pin-key" data-digit="6">6</button>
+                <button type="button" class="pin-key" data-digit="7">7</button>
+                <button type="button" class="pin-key" data-digit="8">8</button>
+                <button type="button" class="pin-key" data-digit="9">9</button>
+                <button type="button" class="pin-key pin-key-action" id="btn-pin-lock-signout">Sign Out</button>
+                <button type="button" class="pin-key" data-digit="0">0</button>
+                <button type="button" class="pin-key pin-key-action" id="btn-pin-backspace" aria-label="Delete">⌫</button>
+            </div>
+
+            <div class="pin-lock-feedback" id="pin-lock-feedback" hidden></div>
+        </div>
+    </div>
+</body>
+</html>
